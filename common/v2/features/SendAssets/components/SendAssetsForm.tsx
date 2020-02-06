@@ -72,6 +72,7 @@ import {
 } from './validators/validators';
 import { processFormForEstimateGas, isERC20Tx } from '../helpers';
 import { weiToFloat } from 'v2/utils';
+import { isValidChecksumAddress } from 'ethereumjs-util';
 
 export const AdvancedOptionsButton = styled(Button)`
   width: 100%;
@@ -142,14 +143,19 @@ const QueryWarning: React.SFC<{}> = () => (
 const SendAssetsSchema = Yup.object().shape({
   amount: Yup.number()
     .min(0, translateRaw('ERROR_0'))
-    .required(translateRaw('REQUIRED')),
+    .required(translateRaw('REQUIRED'))
+    .typeError(translateRaw('ERROR_0')),
   account: Yup.object().required(translateRaw('REQUIRED')),
   address: Yup.object({
-    value: Yup.string().test(
-      'check-eth-address',
-      translateRaw('TO_FIELD_ERROR'),
-      value => isValidETHAddress(value) || isValidENSName(value)
-    )
+    value: Yup.string()
+      .test('checksum-address', translateRaw('CHECKSUM_ERROR'), value =>
+        isValidChecksumAddress(value)
+      )
+      .test(
+        'check-eth-address',
+        translateRaw('TO_FIELD_ERROR'),
+        value => isValidETHAddress(value) || isValidENSName(value)
+      )
   }).required(translateRaw('REQUIRED')),
   gasLimitField: Yup.number()
     .min(GAS_LIMIT_LOWER_BOUND, translateRaw('ERROR_8'))
@@ -165,10 +171,7 @@ const SendAssetsSchema = Yup.object().shape({
     .required(translateRaw('REQUIRED'))
 });
 
-export default function SendAssetsForm({
-  txConfig,
-  onComplete
-}: IStepComponentProps) {
+export default function SendAssetsForm({ txConfig, onComplete }: IStepComponentProps) {
   const { accounts, userAssets, networks, getAccount } = useContext(StoreContext);
   const { getAssetRate } = useContext(RatesContext);
   const [isEstimatingGasLimit, setIsEstimatingGasLimit] = useState(false); // Used to indicate that interface is currently estimating gas.
